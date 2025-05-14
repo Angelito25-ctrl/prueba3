@@ -2,532 +2,265 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>TuRuta - Localización y Autobuses</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <style>
-        /* Estilos generales del cuerpo y HTML */
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden; /* Evita barras de desplazamiento */
-        }
-
-        /* Estilos de la pantalla inicial en blanco */
-        #initial-screen {
-            width: 100%;
-            height: 100vh;
-            background-color: white; /* Fondo blanco */
-            display: flex; /* Para organizar los elementos */
-            flex-direction: column; /* Apila los elementos verticalmente */
-            justify-content: center; /* Centra los elementos verticalmente */
-            align-items: center;      /* Centra los elementos horizontalmente */
-            position: relative; /* Necesario para posicionar el título y el botón de mapa */
-        }
-
-        /* Estilos para el título de la app en la pantalla inicial */
-        #app-title {
-            position: absolute; /* Posicionamiento absoluto dentro de #initial-screen */
-            top: 20px; /* Distancia desde la parte superior */
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 2.5em; /* Tamaño de fuente grande */
-            font-weight: bold;
-            color: #333; /* Color de texto oscuro */
-            padding: 10px 0;
-            z-index: 100; /* Asegura que esté por encima de otros elementos */
-        }
-
-        /* Estilos para los botones principales de la pantalla inicial */
-        .initial-screen-button-style {
-            margin-top: 20px; /* Espacio entre botones */
-            padding: 15px 30px;
-            font-size: 1.2em;
-            cursor: pointer;
-            background-color: #28a745; /* Verde para acciones principales */
-            color: white;
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: background-color 0.3s ease;
-            z-index: 100;
-        }
-        /* Sobrescribe el margen superior para el primer botón para que se posicione correctamente bajo el título */
-        #locate-me-button {
-            margin-top: 100px;
-        }
-
-        .initial-screen-button-style:hover {
-            background-color: #218838;
-        }
-
-        /* Estilos para el selector de ruta en la pantalla inicial */
-        #initial-route-selector-container {
-            margin-top: 20px; /* Espacio con el elemento anterior */
-            text-align: center;
-            z-index: 100;
-        }
-
-        #initial-route-selector-container label {
-            font-size: 1.1em;
-            color: #555;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        #initialRouteSelect {
-            padding: 10px 15px;
-            font-size: 1.1em;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            background-color: #f9f9f9;
-            color: #333;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-            -webkit-appearance: none; /* Remove default select arrow on WebKit */
-            -moz-appearance: none;    /* Remove default select arrow on Mozilla */
-            appearance: none;         /* Remove default select arrow */
-            background-image: url('data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); /* Custom arrow */
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            min-width: 180px; /* Ensure it's wide enough */
-        }
-
-        #initialRouteSelect:hover {
-            border-color: #888;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-
-        #initialRouteSelect:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-        }
-
-
-        /* Estilos para el botón "Ver Mapa" (ahora siempre habilitado y en la esquina) */
-        #initial-screen-button {
-            position: absolute; /* Posicionamiento absoluto para la esquina superior derecha */
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #007bff; /* Color azul */
-            color: white;
-            border: none;
-            border-radius: 5px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            transition: background-color 0.3s ease;
-            z-index: 100;
-        }
-
-        #initial-screen-button:hover {
-            background-color: #0056b3;
-        }
-
-        /* Contenedor del mapa (oculto por defecto) */
-        #map-container {
-            width: 100%;
-            height: 100vh;
-            display: none; /* Oculto por defecto al inicio */
-            position: relative; /* Necesario para posicionar el botón "Info" */
-        }
-
-        /* Estilos del mapa */
-        #map {
-            width: 100%;
-            height: 100vh;
-        }
-
-        /* Estilos del control móvil de Leaflet */
-        .mobile-control {
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            font-size: 14px;
-        }
-        .mobile-control select, .mobile-control a {
-            display: block;
-            margin: 5px 0;
-            text-decoration: none;
-            color: #007bff;
-        }
-        .mobile-control a { cursor: pointer; }
-        .disabled { color: #999; cursor: default; }
-
-        /* Estilos para el botón "Info" en el mapa (ajustado) */
-        #info-button {
-            position: absolute;
-            top: 100px; /* Ajustado a 100px para evitar solapamiento con controles de zoom */
-            left: 20px;
-            padding: 10px 15px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #f8f9fa; /* Fondo claro */
-            color: #343a40; /* Texto oscuro */
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-            z-index: 1000; /* Asegura que esté por encima de todo */
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>TuRuta - Localización y Autobuses</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    /* Estilos generales */
+    body, html { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
+    #initial-screen, #map-container { width:100%; height:100vh; position:relative; }
+    #initial-screen { background:#fff; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+    #app-title { position:absolute; top:20px; width:100%; text-align:center; font-size:2.5em; font-weight:bold; color:#333; }
+    .initial-btn { margin-top:20px; padding:15px 30px; font-size:1.2em; cursor:pointer; background:#28a745; color:#fff; border:none; border-radius:8px; box-shadow:0 4px 8px rgba(0,0,0,0.2); transition:.3s; }
+    #locate-me-btn { margin-top:100px; }
+    .initial-btn:hover { background:#218838; }
+    #route-selector { margin-top:20px; text-align:center; }
+    #route-selector label { font-size:1.1em; color:#555; display:block; margin-bottom:5px; }
+    #route-select { padding:10px 15px; font-size:1.1em; border:1px solid #ccc; border-radius:8px; background:#f9f9f9; appearance:none; background-image:url('data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>'); background-repeat:no-repeat; background-position:right 10px center; min-width:180px; transition:.3s; }
+    #route-select:hover { border-color:#888; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
+    #route-select:focus { outline:none; border-color:#007bff; box-shadow:0 0 0 .2rem rgba(0,123,255,.25); }
+    #info-box {
+      margin-top:20px;
+      width:80%;
+      max-width:300px;
+      border:1px solid #ccc;
+      border-radius:8px;
+      background:#f9f9f9;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1);
+      padding:10px;
+      text-align:left;
+    }
+    #info-box .info-title {
+      font-size:1.2em;
+      font-weight:bold;
+      margin-bottom:5px;
+      color:#333;
+    }
+    #info-box .info-content {
+      font-size:1em;
+      color:#555;
+      line-height:1.4;
+    }
+    #view-map-btn { position:absolute; top:20px; right:20px; padding:10px 20px; font-size:16px; background:#007bff; color:#fff; border:none; border-radius:5px; box-shadow:0 2px 6px rgba(0,0,0,0.3); transition:.3s; }
+    #view-map-btn:hover { background:#0056b3; }
+    #map-container { display:none; }
+    #map { width:100%; height:100vh; }
+    .mobile-control { background:#fff; padding:10px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.3); font-size:14px; }
+    .mobile-control select, .mobile-control a { display:block; margin:5px 0; color:#007bff; text-decoration:none; }
+    .mobile-control a.disabled { color:#999; cursor:default; }
+    #info-btn { position:absolute; top:100px; left:20px; padding:10px 15px; font-size:16px; background:#f8f9fa; color:#343a40; border:1px solid #ced4da; border-radius:5px; box-shadow:0 2px 6px rgba(0,0,0,0.3); z-index:1000; }
+  </style>
 </head>
 <body>
-    <div id="initial-screen">
-        <div id="app-title">TuRuta</div>
-        <button id="locate-me-button" class="initial-screen-button-style">Donde te encuentras</button>
-        <button id="set-destination-button" class="initial-screen-button-style">Donde quieres llegar</button>
+  <div id="initial-screen">
+    <div id="app-title">TuRuta</div>
+    <button id="locate-me-btn" class="initial-btn">Donde te encuentras</button>
+    <button id="set-dest-btn" class="initial-btn">Donde quieres llegar</button>
 
-        <div id="initial-route-selector-container">
-            <label for="initialRouteSelect">Selecciona la Ruta:</label>
-            <select id="initialRouteSelect">
-                <option value="1" selected>Ruta 1</option>
-                <option value="2">Ruta 2</option>
-            </select>
-        </div>
-
-        <button id="initial-screen-button">Ver Mapa</button>
+    <div id="route-selector">
+      <label for="route-select">Selecciona la Ruta:</label>
+      <select id="route-select">
+        <option value="1">Ruta 1</option>
+        <option value="2">Ruta 2</option>
+      </select>
     </div>
 
-    <div id="map-container">
-        <button id="info-button">Info</button>
-        <div id="map"></div>
+    <div id="info-box">
+      <div class="info-title">Información</div>
+      <div class="info-content">Cargando estimación...</div>
     </div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
-    <script>
-        // Variables globales
-        var map; // Variable global para la instancia del mapa
-        var isMapInitialized = false; // Bandera para controlar si el mapa ya se ha inicializado
+    <button id="view-map-btn">Ver Mapa</button>
+  </div>
 
-        // **MOVIDAS AL ÁMBITO GLOBAL PARA EVITAR PROBLEMAS DE SCOPING**
-        var userLocation = null;
-        var destinationLocation = null;
-        var userMarker = null;
-        var destMarker = null;
-        var userLine = null, destLine = null;
-        // Establecemos el valor inicial de selectedRouteId al que estará por defecto en el selector de la pantalla inicial
-        var selectedRouteId = '1';
-        var isChangingUser = false; // Bandera para el modo de cambio de ubicación de usuario
-        var isChangingDest = false; // Bandera para el modo de cambio de ubicación de destino
+  <div id="map-container">
+    <button id="info-btn">Info</button>
+    <div id="map"></div>
+  </div>
 
-        // Declarar 'routes' globalmente
-        var routes;
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/@turf/turf/turf.min.js"></script>
+  <script>
+    // Estado global
+    const state = {
+      map: null,
+      routes: {},
+      selectedRouteId: '1',
+      userLoc: null,
+      destLoc: null,
+      markers: { user: null, dest: null },
+      lines: { user: null, dest: null },
+      animIntervals: []
+    };
 
+    // Datos de rutas
+    const ROUTES_DATA = {
+      1: { coords: [[2.4446,-76.6060],[2.4460,-76.6090],[2.4475,-76.6050],[2.4455,-76.6020],[2.4446,-76.6060]], color: 'blue', interval: 1000 },
+      2: { coords: [[2.4415,-76.6078],[2.4428,-76.6035],[2.4450,-76.6010],[2.4470,-76.6030],[2.4415,-76.6078]], color: 'orange', interval: 1200 }
+    };
 
-        // Obtener referencias a los elementos HTML
-        const initialScreen = document.getElementById('initial-screen');
-        const mapContainer = document.getElementById('map-container');
-        const initialScreenButton = document.getElementById('initial-screen-button');
-        const infoButton = document.getElementById('info-button');
-        const locateMeButton = document.getElementById('locate-me-button');
-        const setDestinationButton = document.getElementById('set-destination-button');
-        // Referencia al nuevo selector de ruta en la pantalla inicial
-        const initialRouteSelect = document.getElementById('initialRouteSelect');
+    // Selectores DOM
+    const DOM = {
+      initial: document.getElementById('initial-screen'),
+      mapCont: document.getElementById('map-container'),
+      routeSelect: document.getElementById('route-select'),
+      locateBtn: document.getElementById('locate-me-btn'),
+      destBtn: document.getElementById('set-dest-btn'),
+      viewMapBtn: document.getElementById('view-map-btn'),
+      infoBtn: document.getElementById('info-btn'),
+      infoContent: document.querySelector('#info-box .info-content')
+    };
 
+    // Inicializa el mapa y lógica
+    function initMap() {
+      if (state.map) {
+        state.map.invalidateSize(); toggleRoutes(); return;
+      }
+      state.map = L.map('map').setView([2.4446,-76.6060],14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19, attribution:'© OpenStreetMap' }).addTo(state.map);
 
-        // --- Lógica para ocultar/mostrar rutas y buses ---
-        function updateRouteVisibility() {
-            if (!routes || !map) return; // Asegurarse de que 'routes' y 'map' estén definidos
+      for (let id in ROUTES_DATA) {
+        const cfg = ROUTES_DATA[id];
+        const line = L.polyline(cfg.coords, { color:cfg.color, weight:4 });
+        const bus = L.marker(cfg.coords[0]);
+        const routeInfo = { coords:cfg.coords, line, bus, interval:cfg.interval, idx:{ val:0 } };
+        const iv = setInterval(() => {
+          routeInfo.idx.val = (routeInfo.idx.val + 1) % cfg.coords.length;
+          routeInfo.bus.setLatLng(cfg.coords[routeInfo.idx.val]); updateETA();
+        }, cfg.interval);
+        state.map.addLayer(line);
+        state.routes[id] = routeInfo;
+        state.animIntervals.push(iv);
+      }
 
-            Object.keys(routes).forEach(function(id) {
-                var r = routes[id];
-                if (id === selectedRouteId) {
-                    // Mostrar esta ruta
-                    if (!map.hasLayer(r.line)) {
-                        r.line.addTo(map);
-                    }
-                    if (!map.hasLayer(r.bus)) {
-                        r.bus.addTo(map);
-                    }
-                } else {
-                    // Ocultar otras rutas
-                    if (map.hasLayer(r.line)) {
-                        map.removeLayer(r.line);
-                    }
-                    if (map.hasLayer(r.bus)) {
-                        map.removeLayer(r.bus);
-                    }
-                }
-            });
+      toggleRoutes(); setupMobileControl(); state.map.on('click', onMapClick);
+      setInterval(updateETA, 1000);
+    }
+
+    function toggleRoutes() {
+      for (let id in state.routes) {
+        const r = state.routes[id];
+        if (id === state.selectedRouteId) { state.map.addLayer(r.line); state.map.addLayer(r.bus); }
+        else { state.map.removeLayer(r.line); state.map.removeLayer(r.bus); }
+      }
+      updateETA();
+    }
+
+    function calcData(pt, coords) {
+      const p = turf.point([pt[1], pt[0]]);
+      const l = turf.lineString(coords.map(c => [c[1], c[0]]));
+      const snap = turf.nearestPointOnLine(l, p, { units:'meters' });
+      return snap.geometry.coordinates; // [lon, lat]
+    }
+
+    // ETA al usuario
+    function tiempoEstimadoLlegadaBus() {
+      if (!state.userLoc) return null;
+      const r = state.routes[state.selectedRouteId];
+      const nearest = calcData(state.userLoc, r.coords);
+      let idxNearest = r.coords.findIndex(c => Math.abs(c[0]-nearest[1])<1e-5 && Math.abs(c[1]-nearest[0])<1e-5);
+      if (idxNearest < 0) idxNearest = 0; 
+      const pasos = (idxNearest - r.idx.val + r.coords.length) % r.coords.length;
+      const etaSec = pasos * r.interval / 1000;
+      return { sec: Math.round(etaSec), min: Math.round(etaSec/60) };
+    }
+
+    // ETA al destino basado en usuario->destino
+    function tiempoEstimadoParaLlegarDestino() {
+      if (!state.userLoc || !state.destLoc) return null;
+      const r = state.routes[state.selectedRouteId];
+      const userSnap = calcData(state.userLoc, r.coords);
+      const destSnap = calcData(state.destLoc, r.coords);
+      let idxUser = r.coords.findIndex(c => Math.abs(c[0]-userSnap[1])<1e-5 && Math.abs(c[1]-userSnap[0])<1e-5);
+      let idxDest = r.coords.findIndex(c => Math.abs(c[0]-destSnap[1])<1e-5 && Math.abs(c[1]-destSnap[0])<1e-5);
+      if (idxUser < 0) idxUser = 0;
+      if (idxDest < 0) idxDest = 0;
+      const pasos = (idxDest - idxUser + r.coords.length) % r.coords.length;
+      const etaSec = pasos * r.interval / 1000;
+      return { sec: Math.round(etaSec), min: Math.round(etaSec/60) };
+    }
+
+    // Actualiza contenido de info-box con ambas ETAs
+    function updateETA() {
+      const etaUser = tiempoEstimadoLlegadaBus();
+      const etaDest = tiempoEstimadoParaLlegarDestino();
+      let html = '';
+      if (etaUser) html += `Tiempo llegada bus: ${etaUser.sec} s (${etaUser.min} min)<br>`;
+      else html += 'Ubica tu posición para ETA bus<br>';
+      if (etaDest) html += `Tiempo hasta destino: ${etaDest.sec} s (${etaDest.min} min)`;
+      else html += 'Ubica destino para ETA destino';
+      DOM.infoContent.innerHTML = html;
+    }
+
+    function redrawLines() {
+      const r = state.routes[state.selectedRouteId];
+      if (state.lines.user) state.map.removeLayer(state.lines.user);
+      if (state.userLoc) {
+        const nearest = calcData(state.userLoc, r.coords);
+        state.lines.user = L.polyline([state.userLoc, [nearest[1], nearest[0]]], { color:'red', weight:3, dashArray:'5,10' }).addTo(state.map);
+      }
+      if (state.lines.dest) state.map.removeLayer(state.lines.dest);
+      if (state.destLoc) {
+        const nearest = calcData(state.destLoc, r.coords);
+        state.lines.dest = L.polyline([state.destLoc, [nearest[1], nearest[0]]], { color:'green', weight:3, dashArray:'5,5' }).addTo(state.map);
+      }
+    }
+
+    function setupMobileControl() {
+      const Control = L.Control.extend({ onAdd: () => {
+        const c = L.DomUtil.create('div', 'mobile-control');
+        c.innerHTML = `
+          <label>Tú aquí</label>
+          <select id="map-route-select">
+            <option value="1">Ruta 1</option>
+            <option value="2">Ruta 2</option>
+          </select>
+          <a id="change-user-loc">Poner ubicación de usuario</a>
+          <hr>
+          <label>Destino</label>
+          <a id="change-dest-loc">Poner ubicación de destino</a>
+        `;
+        L.DomEvent.disableClickPropagation(c);
+        c.querySelector('#map-route-select').value = state.selectedRouteId;
+        return c;
+      }});
+      state.map.addControl(new Control({ position:'topright' }));
+      DOM.mapCont.addEventListener('change', e => {
+        if (e.target.id === 'map-route-select') {
+          state.selectedRouteId = e.target.value; toggleRoutes(); redrawLines();
         }
+      });
+      DOM.mapCont.addEventListener('click', e => {
+        if (e.target.id === 'change-user-loc') { isChangingUser=true; isChangingDest=false; e.target.textContent='Click en mapa para ubicar usuario'; }
+        else if (e.target.id === 'change-dest-loc') { isChangingDest=true; isChangingUser=false; e.target.textContent='Click en mapa para ubicar destino'; }
+      });
+    }
 
-        // --- Lógica de Inicialización del Mapa y Sus Funcionalidades ---
-        function initMapAndLogic() {
-            // Si el mapa ya está inicializado, solo refresca su tamaño para asegurar que se muestre correctamente
-            if (isMapInitialized) {
-                map.invalidateSize();
-                updateRouteVisibility(); // Asegura que la ruta seleccionada se muestre al volver
-                return;
-            }
+    let isChangingUser=false, isChangingDest=false;
+    function onMapClick(e) {
+      if (isChangingUser) {
+        state.userLoc=[e.latlng.lat,e.latlng.lng];
+        if (!state.markers.user) state.markers.user=L.marker(e.latlng).addTo(state.map);
+        else state.markers.user.setLatLng(e.latlng);
+        isChangingUser=false; document.getElementById('change-user-loc').textContent='Cambiar ubicación';
+        redrawLines(); updateETA();
+      } else if (isChangingDest) {
+        state.destLoc=[e.latlng.lat,e.latlng.lng];
+        if (!state.markers.dest) state.markers.dest=L.circleMarker(e.latlng,{radius:8,fillColor:'#000',color:'#000',weight:2,fillOpacity:1}).addTo(state.map);
+        else state.markers.dest.setLatLng(e.latlng);
+        isChangingDest=false; document.getElementById('change-dest-loc').textContent='Cambiar destino';
+        redrawLines();
+      }
+    }
 
-            // Inicialización del mapa (código original)
-            map = L.map('map').setView([2.4446, -76.6060], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
-
-            // Definición de rutas y animación de buses (código original)
-            // Ahora 'routes' es una variable global
-            routes = {
-                1: { coords: [[2.4446,-76.6060],[2.4460,-76.6090],[2.4475,-76.6050],[2.4455,-76.6020],[2.4446,-76.6060]], color: 'blue',   interval: 1000, index: 0, busAnimationIntervalId: null },
-                2: { coords: [[2.4415,-76.6078],[2.4428,-76.6035],[2.4450,-76.6010],[2.4470,-76.6030],[2.4415,-76.6078]], color: 'orange', interval: 1200, index: 0, busAnimationIntervalId: null }
-            };
-
-            Object.keys(routes).forEach(function(id) {
-                var r = routes[id];
-                r.line = L.polyline(r.coords, { color: r.color, weight: 4 }); // No añadir directamente al mapa aquí
-                r.bus  = L.marker(r.coords[0]); // No añadir directamente al mapa aquí
-                
-                // Guardar el ID del intervalo para poder borrarlo si fuera necesario (aunque aquí no se borra)
-                r.busAnimationIntervalId = setInterval(function() {
-                    r.index = (r.index + 1) % r.coords.length;
-                    r.bus.setLatLng(r.coords[r.index]);
-                }, r.interval);
-            });
-
-            // Asegurarse de que solo la ruta seleccionada sea visible al inicializar
-            updateRouteVisibility();
-
-
-            // Función de cálculo con Turf.js (código original)
-            function calcularDatosRuta(punto, lineaCoords) {
-                var pt   = turf.point([punto[1], punto[0]]); // Turf.js espera [longitud, latitud]
-                var line = turf.lineString(lineaCoords.map(c => [c[1], c[0]]));
-                var snap = turf.nearestPointOnLine(line, pt, { units: 'meters' });
-                var d    = turf.pointToLineDistance(pt, line, { units: 'meters' });
-                return { distancia: d.toFixed(2), nearest: [snap.geometry.coordinates[1], snap.geometry.coordinates[0]] }; // Devolver a [latitud, longitud]
-            }
-
-            // Control móvil (código original)
-            var MobileControl = L.Control.extend({ onAdd: function() {
-                var c = L.DomUtil.create('div', 'mobile-control');
-                c.innerHTML = `
-                    <label>Tú estás aquí</label>
-                    <select id="routeSelect">
-                        <option value="1">Ruta 1</option>
-                        <option value="2">Ruta 2</option>
-                    </select>
-                    <a id="toggle-path-user" class="disabled">Distancia: -</a>
-                    <div>ETA bus (usuario): <strong>-</strong></div>
-                    <a id="change-user-loc">Poner ubicación de usuario</a>
-                    <hr>
-                    <label>Destino</label>
-                    <a id="toggle-path-dest" class="disabled">Distancia: -</a>
-                    <div>ETA bus (destino): <strong>-</strong></div>
-                    <a id="change-dest-loc">Poner ubicación de destino</a>
-                `;
-                L.DomEvent.disableClickPropagation(c);
-
-                // Asegura que el selector de ruta en el mapa muestre la ruta seleccionada inicialmente
-                const mapRouteSelect = c.querySelector('#routeSelect');
-                if (mapRouteSelect) {
-                    mapRouteSelect.value = selectedRouteId;
-                }
-                return c;
-            }});
-            map.addControl(new MobileControl({ position: 'topright' }));
-
-            // Redibuja líneas punteadas activas (código original)
-            function redibujarLineasActivas() {
-                var r = routes[selectedRouteId];
-                if (userLine && map.hasLayer(userLine)) { // Verificar si la capa existe antes de remover
-                    map.removeLayer(userLine);
-                    userLine = null; // Establecer a null después de remover
-                }
-                if (userLocation) {
-                    var datosU = calcularDatosRuta(userLocation, r.coords);
-                    userLine = L.polyline([userLocation, datosU.nearest], { color:'red', weight:3, dashArray:'5,10' }).addTo(map);
-                }
-
-                if (destLine && map.hasLayer(destLine)) { // Verificar si la capa existe antes de remover
-                    map.removeLayer(destLine);
-                    destLine = null; // Establecer a null después de remover
-                }
-                if (destinationLocation) {
-                    var datosD = calcularDatosRuta(destinationLocation, r.coords);
-                    destLine = L.polyline([destinationLocation, datosD.nearest], { color:'green', weight:3, dashArray:'5,5' }).addTo(map);
-                }
-            }
-
-            // Actualiza UI de control (código original)
-            function actualizarUI() {
-                var r = routes[selectedRouteId];
-                // Usuario
-                if (userLocation) {
-                    var datosU = calcularDatosRuta(userLocation, r.coords);
-                    // Encuentra el índice del punto más cercano en la ruta. Se agrega tolerancia para comparación de flotantes.
-                    let nearestPointU = datosU.nearest;
-                    let idxU = r.coords.findIndex(c => Math.abs(c[0] - nearestPointU[0]) < 0.00001 && Math.abs(c[1] - nearestPointU[1]) < 0.00001);
-                    // Si no se encuentra una coincidencia exacta (porque turf puede devolver un punto intermedio),
-                    // se busca el punto de la ruta más cercano geométricamente.
-                    if (idxU === -1) {
-                        let minDistance = Infinity;
-                        for (let i = 0; i < r.coords.length; i++) {
-                            let dist = turf.distance(turf.point([r.coords[i][1], r.coords[i][0]]), turf.point([nearestPointU[1], nearestPointU[0]]), { units: 'meters' });
-                            if (dist < minDistance) {
-                                minDistance = dist;
-                                idxU = i;
-                            }
-                        }
-                    }
-
-                    var pasosU = (idxU - r.index + r.coords.length) % r.coords.length;
-                    var tpU = document.getElementById('toggle-path-user');
-                    tpU.classList.remove('disabled'); tpU.textContent = `Distancia: ${datosU.distancia} m`;
-                    tpU.nextElementSibling.textContent = `ETA bus (usuario): ${(pasosU*r.interval/1000).toFixed(1)} s`;
-                } else { // Si no hay userLocation, resetear UI
-                    var tpU = document.getElementById('toggle-path-user');
-                    tpU.classList.add('disabled'); tpU.textContent = `Distancia: -`;
-                    tpU.nextElementSibling.textContent = `ETA bus (usuario): -`;
-                }
-                // Destino
-                if (destinationLocation) {
-                    var datosD = calcularDatosRuta(destinationLocation, r.coords);
-                    let nearestPointD = datosD.nearest;
-                    let idxD = r.coords.findIndex(c => Math.abs(c[0] - nearestPointD[0]) < 0.00001 && Math.abs(c[1] - nearestPointD[1]) < 0.00001);
-                     if (idxD === -1) {
-                        let minDistance = Infinity;
-                        for (let i = 0; i < r.coords.length; i++) {
-                            let dist = turf.distance(turf.point([r.coords[i][1], r.coords[i][0]]), turf.point([nearestPointD[1], nearestPointD[0]]), { units: 'meters' });
-                            if (dist < minDistance) {
-                                minDistance = dist;
-                                idxD = i;
-                            }
-                        }
-                    }
-                    var pasosD = (idxD - r.index + r.coords.length) % r.coords.length;
-                    var tpD = document.getElementById('toggle-path-dest');
-                    tpD.classList.remove('disabled'); tpD.textContent = `Distancia: ${datosD.distancia} m`;
-                    tpD.nextElementSibling.textContent = `ETA bus (destino): ${(pasosD*r.interval/1000).toFixed(1)} s`;
-                } else { // Si no hay destinationLocation, resetear UI
-                    var tpD = document.getElementById('toggle-path-dest');
-                    tpD.classList.add('disabled'); tpD.textContent = `Distancia: -`;
-                    tpD.nextElementSibling.textContent = `ETA bus (destino): -`;
-                }
-            }
-
-            // Listeners de controles (delegados al mapContainer para elementos creados dinámicamente)
-            mapContainer.addEventListener('change', function(event) {
-                if (event.target && event.target.id === 'routeSelect') {
-                    selectedRouteId = event.target.value;
-                    updateRouteVisibility(); // Llamar aquí para ocultar/mostrar rutas
-                    redibujarLineasActivas();
-                    actualizarUI();
-                }
-            });
-            mapContainer.addEventListener('click', function(event) {
-                if (event.target && event.target.id === 'toggle-path-user') {
-                    if (!userLocation) return;
-                    var r = routes[selectedRouteId];
-                    var datosU = calcularDatosRuta(userLocation, r.coords);
-                    if (userLine) { map.removeLayer(userLine); userLine = null; }
-                    else { userLine = L.polyline([userLocation, datosU.nearest], { color:'red', weight:3, dashArray:'5,10' }).addTo(map); }
-                } else if (event.target && event.target.id === 'toggle-path-dest') {
-                    if (!destinationLocation) return;
-                    var r = routes[selectedRouteId];
-                    var datosD = calcularDatosRuta(destinationLocation, r.coords);
-                    if (destLine) { map.removeLayer(destLine); destLine = null; }
-                    else { destLine = L.polyline([destinationLocation, datosD.nearest], { color:'green', weight:3, dashArray:'5,5' }).addTo(map); }
-                } else if (event.target && event.target.id === 'change-user-loc') {
-                    // Este es el botón "Poner ubicación de usuario" en el panel de control
-                    isChangingUser = true; isChangingDest = false;
-                    event.target.textContent = 'Click en mapa para ubicar usuario';
-                } else if (event.target && event.target.id === 'change-dest-loc') {
-                    isChangingDest = true; isChangingUser = false;
-                    event.target.textContent = 'Click en mapa para ubicar destino';
-                }
-            });
-
-            // Clic en mapa para ubicar usuario o destino (código original)
-            map.on('click', function(e) {
-                if (isChangingUser) {
-                    userLocation = [e.latlng.lat, e.latlng.lng];
-                    if (!userMarker) userMarker = L.marker(e.latlng).addTo(map);
-                    else userMarker.setLatLng(e.latlng);
-                    isChangingUser = false; // Desactiva el modo después de colocar el marcador
-                    document.getElementById('change-user-loc').textContent = 'Cambiar ubicación'; // Restablece el texto del botón
-                    redibujarLineasActivas(); actualizarUI();
-                } else if (isChangingDest) {
-                    destinationLocation = [e.latlng.lat, e.latlng.lng];
-                    if (!destMarker) destMarker = L.circleMarker(e.latlng, { radius:8, fillColor:'#000', color:'#000', weight:2, opacity:1, fillOpacity:1 }).addTo(map);
-                    else destMarker.setLatLng(e.latlng);
-                    isChangingDest = false;
-                    document.getElementById('change-dest-loc').textContent = 'Cambiar destino';
-                    redibujarLineasActivas(); actualizarUI();
-                }
-            });
-
-            // Loop de actualización de UI (código original)
-            setInterval(actualizarUI, 1000);
-            isMapInitialized = true; // Marca el mapa como inicializado
-        }
-
-        // --- Funciones para Manejar la Visibilidad de las Pantallas ---
-        function showMapScreen() {
-            initialScreen.style.display = 'none'; // Oculta la pantalla inicial
-            mapContainer.style.display = 'block'; // Muestra el contenedor del mapa
-            initMapAndLogic(); // Inicializa el mapa (si no está) o refresca su tamaño
-        }
-
-        function showInitialScreen() {
-            mapContainer.style.display = 'none'; // Oculta el contenedor del mapa
-            initialScreen.style.display = 'flex'; // Muestra la pantalla inicial
-        }
-
-        // --- Listeners para los botones ---
-        initialScreenButton.addEventListener('click', showMapScreen); // Al hacer clic en "Ver Mapa" (solo muestra el mapa)
-
-        // Listener para el botón "Donde te encuentras"
-        locateMeButton.addEventListener('click', function() {
-            showMapScreen(); // Transiciona a la pantalla del mapa
-
-            // Activa el modo de ubicación de usuario
-            isChangingUser = true;
-            isChangingDest = false; // Desactiva el modo de destino
-
-            // Actualiza el texto del botón de control para guiar al usuario.
-            const changeUserLocButton = document.getElementById('change-user-loc');
-            if (changeUserLocButton) {
-                changeUserLocButton.textContent = 'Click en mapa para ubicar usuario';
-            }
-        });
-
-        // NUEVO LISTENER PARA EL BOTÓN "Donde quieres llegar"
-        setDestinationButton.addEventListener('click', function() {
-            showMapScreen(); // Transiciona a la pantalla del mapa
-
-            // Activa el modo de ubicación de destino
-            isChangingDest = true;
-            isChangingUser = false; // Desactiva el modo de usuario
-
-            // Actualiza el texto del botón de control para guiar al usuario.
-            const changeDestLocButton = document.getElementById('change-dest-loc');
-            if (changeDestLocButton) {
-                changeDestLocButton.textContent = 'Click en mapa para ubicar destino';
-            }
-        });
-
-        // Listener para el nuevo selector de ruta en la pantalla inicial
-        initialRouteSelect.addEventListener('change', function() {
-            selectedRouteId = this.value; // Actualiza la variable global cuando el usuario cambia la selección
-            // Si el mapa ya está inicializado y visible, actualizar la visibilidad de las rutas
-            if (isMapInitialized) {
-                updateRouteVisibility();
-                redibujarLineasActivas(); // Asegura que las líneas punteadas se actualicen para la nueva ruta
-                actualizarUI(); // Actualiza la información de ETA/distancia para la nueva ruta
-            }
-        });
-
-        infoButton.addEventListener('click', showInitialScreen); // Al hacer clic en "Info"
-    </script>
+    // Navegación pantallas
+    function showMap(){ DOM.initial.style.display='none'; DOM.mapCont.style.display='block'; initMap(); }
+    function showInitial(){ DOM.mapCont.style.display='none'; DOM.initial.style.display='flex'; }
+    DOM.viewMapBtn.addEventListener('click', showMap);
+    DOM.locateBtn.addEventListener('click', ()=>{ showMap(); isChangingUser=true; isChangingDest=false; document.getElementById('change-user-loc').textContent='Click en mapa para ubicar usuario'; });
+    DOM.destBtn.addEventListener('click', ()=>{ showMap(); isChangingDest=true; isChangingUser=false; document.getElementById('change-dest-loc').textContent='Click en mapa para ubicar destino'; });
+    DOM.routeSelect.addEventListener('change', e=>{ state.selectedRouteId=e.target.value; if(state.map){ toggleRoutes(); redrawLines(); } });
+    DOM.infoBtn.addEventListener('click', showInitial);
+  </script>
 </body>
 </html>
